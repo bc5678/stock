@@ -6,8 +6,9 @@ import os
 import datetime
 
 
-START_DATE = datetime.date(2023, 11, 1)
+START_DATE = datetime.date(2023, 11, 26)
 END_DATE = datetime.date.today()
+#END_DATE = datetime.date(2010, 12, 31)
 STOCK_DAILY_INFO_URL = 'https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=[DATE]&type=ALLBUT0999&_=1649743235999'
 STOCK_DAILY_INFO_PICKLE = 'stock_daily_info.pkl'
 OTC_DAILY_INFO_URL = 'https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?l=zh-tw&o=csv&d=[DATE]&se=EW&s=0,asc,0'
@@ -77,7 +78,11 @@ def get_otc_daily_info(date):
 
     # Format: 民國年/月/日
     date = str(int(date)-19110000)
-    res = requests.get(OTC_DAILY_INFO_URL.replace('[DATE]', f'{date[0:3]}/{date[3:5]}/{date[5:7]}'), headers=headers)
+    if len(date) == 7:
+        res = requests.get(OTC_DAILY_INFO_URL.replace('[DATE]', f'{date[0:3]}/{date[3:5]}/{date[5:7]}'), headers=headers)
+    elif len(date) == 6:
+        res = requests.get(OTC_DAILY_INFO_URL.replace('[DATE]', f'{date[0:2]}/{date[2:4]}/{date[4:6]}'), headers=headers)
+
     lines = [l for l in res.text.split('\n') if len(l.split(','))>=10]
 
     # 沒交易的日期仍會有內容, 所以改為確認parse完後沒data
@@ -118,15 +123,13 @@ def get_otc_daily_info(date):
     return df
 
 
-if __name__ == '__main__':
-#    pd.set_option('display.max_columns', None)
-#    pd.set_option('display.max_rows', None)
-#    pd.set_option('max_colwidth', 400)
+def get_stock_otc_daily_info():
+    print("===== 開始抓取歷年上市上櫃股票每日交易資訊 =====")
     if os.path.isfile(STOCK_DAILY_INFO_PICKLE):
-        df_all = pd.read_pickle(STOCK_DAILY_INFO_PICKLE)
-        existed_date_list = df_all['日期'].unique()
+        df_stock_info = pd.read_pickle(STOCK_DAILY_INFO_PICKLE)
+        existed_date_list = df_stock_info['日期'].unique()
     else:
-        df_all = None
+        df_stock_info = None
         existed_date_list = []
     
     count = 0
@@ -141,16 +144,24 @@ if __name__ == '__main__':
             continue
         #print(df_stock)
         #print(df_stock.info())
-        #print(df_otc)
-        #print(df_otc.info())
 
-        df_all = pd.concat([df_all, df_stock])
-        df_all = pd.concat([df_all, df_otc])
-        print(df_all)
-        #print(df_all.info())
+        df_stock_info = pd.concat([df_stock_info, df_stock])
+        df_stock_info = pd.concat([df_stock_info, df_otc])
+        print(df_stock_info)
+        print(df_stock_info.info())
         #input()
         count += 1
         if count == 20:
             count = 0
-            df_all.to_pickle(STOCK_DAILY_INFO_PICKLE)
-    df_all.to_pickle(STOCK_DAILY_INFO_PICKLE)
+            df_stock_info.to_pickle(STOCK_DAILY_INFO_PICKLE)
+    df_stock_info = df_stock_info.reset_index(drop=True)
+    df_stock_info.to_pickle(STOCK_DAILY_INFO_PICKLE)
+    print("===== 歷年上市上櫃股票每日交易資訊update完成 =====")
+    return df_stock_info
+
+
+if __name__ == '__main__':
+    get_stock_otc_daily_info()
+#    pd.set_option('display.max_columns', None)
+#    pd.set_option('display.max_rows', None)
+#    pd.set_option('max_colwidth', 400)
