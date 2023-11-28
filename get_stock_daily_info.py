@@ -6,9 +6,9 @@ import os
 import datetime
 
 
-START_DATE = datetime.date(2023, 11, 26)
+START_DATE = datetime.date(2023, 11, 25)
 END_DATE = datetime.date.today()
-#END_DATE = datetime.date(2010, 12, 31)
+#END_DATE = datetime.date(2013, 8, 31)
 STOCK_DAILY_INFO_URL = 'https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=[DATE]&type=ALLBUT0999&_=1649743235999'
 STOCK_DAILY_INFO_PICKLE = 'stock_daily_info.pkl'
 OTC_DAILY_INFO_URL = 'https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?l=zh-tw&o=csv&d=[DATE]&se=EW&s=0,asc,0'
@@ -145,8 +145,8 @@ def get_stock_otc_daily_info():
         #print(df_stock)
         #print(df_stock.info())
 
-        df_stock_info = pd.concat([df_stock_info, df_stock])
-        df_stock_info = pd.concat([df_stock_info, df_otc])
+        df_stock_info = pd.concat([df_stock_info, df_stock], ignore_index=True)
+        df_stock_info = pd.concat([df_stock_info, df_otc], ignore_index=True)
         print(df_stock_info)
         print(df_stock_info.info())
         #input()

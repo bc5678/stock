@@ -68,7 +68,7 @@ def get_new_stock_subscription_info():
         else:
             df = get_new_stock_subscription(year)
             print(df)
-            df_all = pd.concat([df_all, df])
+            df_all = pd.concat([df_all, df], ignore_index=True)
     df_all = df_all.reset_index(drop=True)
     df_all.to_pickle(NEW_STOCK_SUBSCRIPTION_PICKLE)
     print("===== 歷年公開申購資訊update完成 =====")
