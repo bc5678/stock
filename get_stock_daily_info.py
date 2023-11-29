@@ -6,7 +6,7 @@ import os
 import datetime
 
 
-START_DATE = datetime.date(2023, 11, 25)
+START_DATE = datetime.date(2023, 11, 29)
 END_DATE = datetime.date.today()
 #END_DATE = datetime.date(2013, 8, 31)
 STOCK_DAILY_INFO_URL = 'https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=[DATE]&type=ALLBUT0999&_=1649743235999'
