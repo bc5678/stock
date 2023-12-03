@@ -8,6 +8,15 @@ import pandas as pd
 STRATEGY_PICKLE = 'subscription_strategy.pkl'
 
 
+# 策略1: 全買
+# 策略2: 最後購買日開盤價 >= 申購價*1.1 才買, 無資料(如初上市上櫃)不買 
+# 策略3: 最後購買日開盤價 >= 申購價*1.05 才買, 無資料(如初上市上櫃)不買 
+# 策略4: 最後購買日收盤價 >= 申購價*1.1 才買, 無資料(如初上市上櫃)不買 
+# 策略5: 最後購買日收盤價 >= 申購價*1.05 才買, 無資料(如初上市上櫃)不買 
+# 策略6: 最後購買日開盤價 >= 申購價*1.1 才買, 無資料(如初上市上櫃)買 
+# 策略7: 最後購買日開盤價 >= 申購價*1.05 才買, 無資料(如初上市上櫃)買 
+# 策略8: 最後購買日收盤價 >= 申購價*1.1 才買, 無資料(如初上市上櫃)買 
+# 策略9: 最後購買日收盤價 >= 申購價*1.05 才買, 無資料(如初上市上櫃)買 
 def strategy(df_subscription, df_stock):
     # 如果每檔都買, 以撥券日的開盤價賣出, 預期獲益為何
     df = df_subscription[df_subscription['證券代號'].isin(df_stock['證券代號'])]
@@ -16,10 +25,9 @@ def strategy(df_subscription, df_stock):
 
     #df = df[df['抽籤日期'].str.startswith('2018')]
 
-    df_result = pd.DataFrame({'證券代號': [], '抽籤日期': [], '買入價': [], '賣出價': [], '賺賠': [], '策略1': [], '策略2': [], 
-                                '策略3': [], 
-                                '策略4': [], 
-                                '策略5': [], 
+    df_result = pd.DataFrame({'證券代號': [], '抽籤日期': [], '買入價': [], '賣出價': [], '賺賠': [], '策略1': [], '策略2': [], '策略3': [], '策略4': [], '策略5': [], '策略6': [], '策略7': [], 
+                                '策略8': [], 
+                                '策略9': [], 
                                 '撥券日_開盤價': [],
                                 '撥券日_收盤價': [],
                                 '撥券日_最高價': [],
@@ -32,7 +40,7 @@ def strategy(df_subscription, df_stock):
 
     print(df)
     for index, row in df.iterrows():
-        strategy1 = strategy2 = strategy3 = strategy4 = strategy5 = True
+        strategy1 = strategy2 = strategy3 = strategy4 = strategy5 = strategy6 = strategy7 = strategy8 = strategy9 = True
 
         sell_date = row['撥券日期(上市、上櫃日期)']
         date = datetime.datetime.strptime(sell_date, '%Y%m%d').date()
@@ -43,18 +51,22 @@ def strategy(df_subscription, df_stock):
         compare_date = row['申購結束日']
         y = stock_info_df[(stock_info_df['日期'] == compare_date) & (stock_info_df['證券代號'] == row['證券代號'])]
         if len(y) == 0:
-            strategy2 = strategy3 = False
+            strategy2 = strategy3 = strategy4 = strategy5 = False
         else:
             compare_price = y['開盤價'].iloc[0]
             if compare_price < buy_price*1.1:
                 strategy2 = False
+                strategy6 = False
             if compare_price < buy_price*1.05:
                 strategy3 = False
+                strategy7 = False
             compare_price = y['收盤價'].iloc[0]
             if compare_price < buy_price*1.1:
                 strategy4 = False
+                strategy8 = False
             if compare_price < buy_price*1.05:
                 strategy5 = False
+                strategy9 = False
 
         x = stock_info_df[(stock_info_df['日期'] == sell_date) & (stock_info_df['證券代號'] == row['證券代號'])]
 
@@ -100,6 +112,10 @@ def strategy(df_subscription, df_stock):
             '策略3': strategy3,
             '策略4': strategy4,
             '策略5': strategy5,
+            '策略6': strategy6,
+            '策略7': strategy7,
+            '策略8': strategy8,
+            '策略9': strategy9,
             '撥券日_開盤價': x['開盤價'].iloc[0], 
             '撥券日_收盤價': x['收盤價'].iloc[0],
             '撥券日_最高價': x['最高價'].iloc[0],
@@ -116,17 +132,19 @@ def strategy(df_subscription, df_stock):
 
 
 def score(df):
-    score_df = pd.DataFrame({'策略1': [], '策略2': [], 
-                '策略3': [],
-                '策略4': [],
-                '策略5': []
+    score_df = pd.DataFrame({'策略1': [], '策略2': [], '策略3': [], '策略4': [], '策略5': [], '策略6': [], '策略7': [], '策略8': [],
+                '策略9': []
                })
     new_row = pd.DataFrame({
         '策略1': df['策略1'].sum()/df['策略1'].sum(),
         '策略2': df['策略2'].sum()/df['策略1'].sum(),
         '策略3': df['策略3'].sum()/df['策略1'].sum(),
         '策略4': df['策略4'].sum()/df['策略1'].sum(),
-        '策略5': df['策略5'].sum()/df['策略1'].sum()
+        '策略5': df['策略5'].sum()/df['策略1'].sum(),
+        '策略6': df['策略6'].sum()/df['策略1'].sum(),
+        '策略7': df['策略7'].sum()/df['策略1'].sum(),
+        '策略8': df['策略8'].sum()/df['策略1'].sum(),
+        '策略9': df['策略9'].sum()/df['策略1'].sum()
     }, index=['購買檔數/全部檔數'])
     score_df = pd.concat([score_df, new_row])
 
@@ -135,7 +153,11 @@ def score(df):
         '策略2': df[df['賺賠'] < 0]['策略2'].sum() / df['策略2'].sum(),
         '策略3': df[df['賺賠'] < 0]['策略3'].sum() / df['策略3'].sum(),
         '策略4': df[df['賺賠'] < 0]['策略4'].sum() / df['策略4'].sum(),
-        '策略5': df[df['賺賠'] < 0]['策略5'].sum() / df['策略5'].sum()
+        '策略5': df[df['賺賠'] < 0]['策略5'].sum() / df['策略5'].sum(),
+        '策略6': df[df['賺賠'] < 0]['策略6'].sum() / df['策略6'].sum(),
+        '策略7': df[df['賺賠'] < 0]['策略7'].sum() / df['策略7'].sum(),
+        '策略8': df[df['賺賠'] < 0]['策略8'].sum() / df['策略8'].sum(),
+        '策略9': df[df['賺賠'] < 0]['策略9'].sum() / df['策略9'].sum()
     }, index=['賠錢檔數/購買檔數'])
     score_df = pd.concat([score_df, new_row])
     print(score_df)
@@ -164,8 +186,12 @@ def prune_df(s_df, n_df):
 
     return s_df, n_df
 
+
 if __name__ == '__main__':
-     
+#    pd.set_option('display.max_columns', None)
+#    pd.set_option('display.max_rows', None)
+#    pd.set_option('display.width', 1000)
+
     '''new_stock_subscription_df = new_stock_subscription.get_new_stock_subscription_info()
     print(new_stock_subscription_df)
     print(new_stock_subscription_df.info())
@@ -182,13 +208,13 @@ if __name__ == '__main__':
     new_stock_subscription_df = pd.read_pickle('new_stock_subscription_subset1.pkl')
     df = strategy(new_stock_subscription_df, stock_info_df)
     
-    df = pd.read_pickle('subscription_strategy.pkl')
     print(df)
+    print(df[(df['策略3'] == True) & (df['賺賠'] < 0)])
     score(df)
     
      
-    print(len(df[df['撥券日_開盤價'] < df['撥券日_收盤價']]))
-    print(len(df[df['撥券日_開盤價'] >= df['撥券日_收盤價']]))
+    #print(len(df[df['撥券日_開盤價'] < df['撥券日_收盤價']]))
+    #print(len(df[df['撥券日_開盤價'] >= df['撥券日_收盤價']]))
 
-    print(len(df[df['撥券日_收盤價'] < df['撥券前日_收盤價']]))
-    print(len(df[df['撥券日_收盤價'] >= df['撥券前日_收盤價']]))
+    #print(len(df[df['撥券日_收盤價'] < df['撥券前日_收盤價']]))
+    #print(len(df[df['撥券日_收盤價'] >= df['撥券前日_收盤價']]))

@@ -42,6 +42,7 @@ def get_new_stock_subscription(year):
             replace_map[column] = column.strip()
     if replace_map:
         df.rename(columns=replace_map, inplace=True)
+    df = df[df['發行市場'] != '中央登錄公債']
     df = df.drop(columns=['序號', '證券名稱', '主辦券商', '總承銷金額(元)', '總合格件', '承銷股數', '實際承銷股數', '實際承銷價(元)', '取消公開抽籤'])
     df = df.map(lambda s: str(s).replace(',','')).iloc[:,:-1]
     df = df.apply(ROC_date_convert, axis=1)
@@ -76,7 +77,8 @@ def get_new_stock_subscription_info():
 
 
 if __name__ == '__main__':
-    get_new_stock_subscription_info()
 #    pd.set_option('display.max_columns', None)
 #    pd.set_option('display.max_rows', None)
-#    pd.set_option('max_colwidth', 400)
+#    pd.set_option('display.width', 1000)
+    get_new_stock_subscription_info()
+    

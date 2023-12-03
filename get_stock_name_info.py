@@ -36,4 +36,4 @@ if __name__ == '__main__':
     get_stock_name_info()
 #    pd.set_option('display.max_columns', None)
 #    pd.set_option('display.max_rows', None)
-#    pd.set_option('max_colwidth', 400)
+#    pd.set_option('display.width', 1000)
