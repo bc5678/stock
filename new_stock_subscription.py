@@ -63,14 +63,14 @@ def get_new_stock_subscription_info():
     for year in range(START_YEAR, END_YEAR+1):
         print(year)
         for existed_date in existed_date_list:
-            if str(year) in existed_date:
+            if (str(year) in existed_date) and (year != datetime.date.today().year):
                 print(f'{year} exist')
                 break
         else:
             df = get_new_stock_subscription(year)
             print(df)
             df_all = pd.concat([df_all, df], ignore_index=True)
-    df_all = df_all.reset_index(drop=True)
+    df_all = df_all.drop_duplicates().reset_index(drop=True)
     df_all.to_pickle(NEW_STOCK_SUBSCRIPTION_PICKLE)
     print("===== 歷年公開申購資訊update完成 =====")
     return df_all

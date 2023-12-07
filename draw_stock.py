@@ -1,12 +1,14 @@
 import pandas as pd
+import io
 import json
 import datetime
+import requests
 import urllib.request
 import new_stock_subscription
 
 
 def get_stock_runtime_info(stock_list):
-    stocks_text = '|'.join(f'tse_{stock}.tw' for stock in stock_list)
+    stocks_text = '|'.join(f'tse_{stock}.tw|otc_{stock}.tw' for stock in stock_list)
     url = 'http://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch='+ stocks_text + '&json=1&delay=0&_=1552123547443'
     data = json.loads(urllib.request.urlopen(url).read())
 
@@ -42,9 +44,27 @@ def get_stock_runtime_info(stock_list):
     #start_time = datetime.datetime.strptime(str(time.date())+'9:30', '%Y-%m-%d%H:%M')
     #end_time =  datetime.datetime.strptime(str(time.date())+'13:30', '%Y-%m-%d%H:%M')
     
+def get_emerging_runtime_info(stock_list):
+    url = 'https://www.tpex.org.tw/storage/emgstk/ch/new.csv'
+    res = requests.get(url)
+    res.encoding = 'big5'
+
+    lines = [l for l in res.text.split('\n') if len(l.split(','))>=10]
+    df = pd.read_csv(io.StringIO(','.join(lines)))
+    df = df.reset_index(drop=True)
+    df = df.map(lambda s: (str(s).replace(',','').replace(' ', '')))
+    df = df[df['代號'].isin(stock_list)]
+    df.rename(columns={'代號': '股票代號', '名稱': '股票名稱'}, inplace=True)
+    try:
+        df['成交'] = (df['成交'].astype(float) * 100).astype(int)
+    except ValueError:
+        print(f'{stock} 還沒有開盤價！')
+    return df
+
+
 if __name__ == '__main__':
     date = datetime.datetime.today().strftime('%Y%m%d')
-    date = '20231204'
+    #date = '20231206'
 
     n_df = new_stock_subscription.get_new_stock_subscription_info()
     print(n_df)
@@ -56,14 +76,26 @@ if __name__ == '__main__':
 
     for stock in stock_list:
         print(stock)
+        stock_type = ''
         df = get_stock_runtime_info([stock])
         if len(df) == 0:
-            print(f'資訊不足, 無法推薦')
-            continue
+            df = get_emerging_runtime_info([stock])
+            if len(df) == 0:
+                print(f'資訊不足, 無法推薦')
+                continue
+            else:
+                stock_type = 'emerging'
+        else:
+            stock_type = 'stock_otc'
+
         df = df.iloc[0]
-        current_price = df['開盤價']
+        if stock_type == 'stock_otc':
+            current_price = df['開盤價']
+        else:
+            current_price = df['成交']
         buy_price = n_df[(n_df['申購結束日'] == date) & (n_df['證券代號'] == stock)]['承銷價(元)'].iloc[0]
         if current_price >= buy_price*1.1:
             print(f"建議抽股票: [{df['股票代號']}][{df['股票名稱']}] : {current_price} >= {buy_price} * 1.1 = {buy_price * 1.1}")
         else:
             print(f"建議不抽股票: [{df['股票代號']}][{df['股票名稱']}] : {current_price} < {buy_price} * 1.1 = {buy_price * 1.1}")
+    input()

@@ -6,7 +6,7 @@ import os
 import datetime
 
 
-START_DATE = datetime.date(2023, 11, 29)
+START_DATE = datetime.date(2023, 12, 5)
 END_DATE = datetime.date.today()
 #END_DATE = datetime.date(2013, 8, 31)
 STOCK_DAILY_INFO_URL = 'https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=[DATE]&type=ALLBUT0999&_=1649743235999'
@@ -66,7 +66,7 @@ def get_stock_daily_info(date):
 
     lines = [l for l in res.text.split('\n') if len(l.split(',"'))>=10]
     df = pd.read_csv(io.StringIO(','.join(lines))).iloc[:, :-1]
-    df = df.map(lambda s: (str(s).replace('=','').replace(',','').replace('"',''))).iloc[:,:-1]
+    df = df.map(lambda s: (str(s).replace('=', '').replace(',', '').replace('"', '').replace(' ', ''))).iloc[:,:-1]
     df = df.drop(columns=['證券名稱', '漲跌(+/-)', '漲跌價差'])
     df = df.apply(stock_to_numeric, axis=1)
     df['日期'] = date
@@ -90,7 +90,7 @@ def get_otc_daily_info(date):
         return None
 
     df = pd.read_csv(io.StringIO(','.join(lines)))
-    df = df.map(lambda s: (str(s).replace(',',''))).iloc[:,:-3]
+    df = df.map(lambda s: (str(s).replace(',', '').replace(' ', ''))).iloc[:,:-3]
     df = df.drop(columns=['名稱', '漲跌'])
 
     # 上櫃資料的column有些包含空白, 先將其處理掉
