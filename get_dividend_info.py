@@ -4,35 +4,24 @@ import datetime
 import requests
 import numpy as np
 import pandas as pd
+#https://www.twse.com.tw/rwd/zh/exRight/TWT48U?response=csv
 
 START_YEAR = 2010
 END_YEAR = datetime.date.today().year
-NEW_STOCK_SUBSCRIPTION_URL = 'https://www.twse.com.tw/rwd/zh/announcement/publicForm?date=[YEAR]0101&response=csv'
-NEW_STOCK_SUBSCRIPTION_PICKLE = 'new_stock_subscription.pkl'
+SUBSCRIPTION_URL = 'https://www.twse.com.tw/rwd/zh/announcement/publicForm?date=[YEAR]0101&response=csv'
+SUBSCRIPTION_PICKLE = 'subscription_info.pkl'
+
+def get_twse_dividend_history(start_date: str, end_date: str):
+    url = f"https://www.twse.com.tw/exchangeReport/TWT49U?response=html&strDate={start_date}&endDate={end_date}"
+    dividend_history = pd.read_html(url)
+
+    return dividend_history[0]
 
 
-def ROC_date_convert(data):
-    for c in ['抽籤日期', '申購開始日', '申購結束日', '撥券日期(上市、上櫃日期)']:
-        x = data[c].split('/')
-        data[c] = str(int(x[0])+1911) + x[1] + x[2]
-    return data
 
-
-def price_to_int(data):
-    for c in ['承銷價(元)']:
-        data[c] = (np.rint(float(data[c])*100)).astype(np.uint32)
-    for c in ['申購股數']:
-        data[c] = np.uint32(int(data[c]))
-    for c in ['中籤率(%)']:
-        data[c] = np.float32(data[c])
-    return data
-
-
-def get_new_stock_subscription(year):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/111.25 (KHTML, like Gecko) Chrome/99.0.2345.81 Safari/123.36'}
-
+def get_subscription_by_year(year):
     # Format: 西元年月日
-    res = requests.get(NEW_STOCK_SUBSCRIPTION_URL.replace('[YEAR]', str(year)), headers=headers)
+    res = requests.get(SUBSCRIPTION_URL.replace('[YEAR]', str(year)))
 
     lines = [l for l in res.text.replace('Co."," Ltd.', 'Co., Ltd.').split('\n') if len(l.split(',"'))>=10]
     df = pd.read_csv(io.StringIO(','.join(lines))).iloc[:, :]
@@ -50,10 +39,10 @@ def get_new_stock_subscription(year):
     return df
 
 
-def get_new_stock_subscription_info():
+def get_subscription_info():
     print("===== 開始抓取歷年公開申購資訊 =====")
-    if os.path.isfile(NEW_STOCK_SUBSCRIPTION_PICKLE):
-        df_all = pd.read_pickle(NEW_STOCK_SUBSCRIPTION_PICKLE)
+    if os.path.isfile(SUBSCRIPTION_PICKLE):
+        df_all = pd.read_pickle(SUBSCRIPTION_PICKLE)
         existed_date_list = df_all['抽籤日期'].unique()
     else:
         df_all = None
@@ -67,11 +56,11 @@ def get_new_stock_subscription_info():
                 print(f'{year} exist')
                 break
         else:
-            df = get_new_stock_subscription(year)
+            df = get_subscription_by_year(year)
             print(df)
             df_all = pd.concat([df_all, df], ignore_index=True)
     df_all = df_all.drop_duplicates().reset_index(drop=True)
-    df_all.to_pickle(NEW_STOCK_SUBSCRIPTION_PICKLE)
+    df_all.to_pickle(SUBSCRIPTION_PICKLE)
     print("===== 歷年公開申購資訊update完成 =====")
     return df_all
 
@@ -80,5 +69,5 @@ if __name__ == '__main__':
 #    pd.set_option('display.max_columns', None)
 #    pd.set_option('display.max_rows', None)
 #    pd.set_option('display.width', 1000)
-    get_new_stock_subscription_info()
+    get_subscription_info()
     
