@@ -11,11 +11,10 @@ SUBSCRIPTION_URL = 'https://www.twse.com.tw/rwd/zh/announcement/publicForm?date=
 SUBSCRIPTION_PICKLE = 'subscription_info.pkl'
 
 
-def ROC_date_convert(data):
-    for c in ['抽籤日期', '申購開始日', '申購結束日', '撥券日期(上市、上櫃日期)']:
-        x = data[c].split('/')
-        data[c] = str(int(x[0])+1911) + x[1] + x[2]
-    return data
+def ROC_date_convert(x):
+    x = x.split('/')
+    x = str(int(x[0])+1911) + x[1] + x[2]
+    return x
 
 
 def str_to_numeric(data):
@@ -45,7 +44,8 @@ def get_subscription_by_year(year):
     df = df.drop(columns=['序號', '證券名稱', '主辦券商', '總承銷金額(元)', '總合格件', '承銷股數', '實際承銷股數', '實際承銷價(元)', '取消公開抽籤', '中籤率(%)'])
     df = df.iloc[:,:-1]
     df = df.map(lambda s: str(s).replace(',',''))
-    df = df.apply(ROC_date_convert, axis=1)
+    for column in ['抽籤日期', '申購開始日', '申購結束日', '撥券日期(上市、上櫃日期)']:
+        df[column] = df[column].apply(ROC_date_convert)
     df = df.apply(str_to_numeric, axis=1)
     return df
 

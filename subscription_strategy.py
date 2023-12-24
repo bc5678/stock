@@ -1,9 +1,10 @@
 import os
 import datetime
+import numpy as np
+import pandas as pd
 import get_subscription_info
 import get_stock_daily_info
 import get_emerging_daily_info
-import pandas as pd
 
 
 STRATEGY_PICKLE = 'subscription_strategy.pkl'
@@ -20,8 +21,6 @@ STRATEGY_PICKLE = 'subscription_strategy.pkl'
 # 策略9: 最後購買日收盤價 >= 申購價*1.05 才買, 無資料買 
 def strategy(df_stock, df_emerging, df_subscription):
     # 如果每檔都買, 以撥券日的開盤價賣出, 預期獲益為何
-    df = df_subscription[(df_subscription['證券代號'].str.endswith('A') == False) & (df_subscription['證券代號'].str.endswith('B') == False) & (df_subscription['證券代號'].str.endswith('C') == False)]
-
     df_result = pd.DataFrame({'證券代號': [], '抽籤日期': [], '買入價': [], '賣出價': [], '賺賠': [], 
                                 '策略1': [], '策略2': [], '策略3': [], '策略4': [], '策略5': [], '策略6': [], '策略7': [], '策略8': [], '策略9': [], 
                                 '撥券日_開盤價': [], '撥券日_收盤價': [], '撥券日_最高價': [], '撥券日_最低價': [],
@@ -30,7 +29,6 @@ def strategy(df_stock, df_emerging, df_subscription):
     print(df_subscription)
     for index, row in df_subscription.iterrows():
         strategy1 = strategy2 = strategy3 = strategy4 = strategy5 = strategy6 = strategy7 = strategy8 = strategy9 = True
-        stock_type = ''
 
         sell_date = row['撥券日期(上市、上櫃日期)']
         if datetime.datetime.strptime(sell_date, '%Y%m%d').date() > datetime.date.today():
@@ -38,23 +36,15 @@ def strategy(df_stock, df_emerging, df_subscription):
 
         buy_price = row.loc['承銷價(元)']
         buy_date = row['申購結束日']
-        buy_date_info = df_stock[(df_stock['日期'] == buy_date) & (df_stock['證券代號'] == row['證券代號'])]
-        if len(buy_date_info) > 0:
-            stock_type = 'stock_otc'
-        else:
-            buy_date_info = df_emerging[(df_emerging['日期'] == buy_date) & (df_emerging['證券代號'] == row['證券代號'])]
-            if len(buy_date_info) > 0:
-                stock_type = 'emerging'
-            
+        buy_date_info1 = df_stock[(df_stock['日期'] == buy_date) & (df_stock['證券代號'] == row['證券代號'])]
+        buy_date_info2 = df_emerging[(df_emerging['日期'] == buy_date) & (df_emerging['證券代號'] == row['證券代號'])]
+        buy_date_info = pd.concat([buy_date_info1, buy_date_info2])           
 
         print(row['證券代號'], row['申購結束日'])
         if len(buy_date_info) == 0:
             strategy2 = strategy3 = strategy4 = strategy5 = False
         else:
-            if stock_type == 'stock_otc':
-                compare_price = buy_date_info['開盤價'].iloc[0]
-            else:
-                compare_price = buy_date_info['最後'].iloc[0]
+            compare_price = [buy_date_info[x].iloc[0] for x in ['開盤價', '最後'] if not np.isnan(buy_date_info[x].iloc[0])][0]
                 
             if compare_price < buy_price*1.1:
                 strategy2 = False
@@ -63,10 +53,7 @@ def strategy(df_stock, df_emerging, df_subscription):
                 strategy3 = False
                 strategy7 = False
 
-            if stock_type == 'stock_otc':
-                compare_price = buy_date_info['收盤價'].iloc[0]
-            else:
-                compare_price = buy_date_info['最後'].iloc[0]
+            compare_price = [buy_date_info[x].iloc[0] for x in ['收盤價', '最後'] if not np.isnan(buy_date_info[x].iloc[0])][0]
 
             if compare_price < buy_price*1.1:
                 strategy4 = False
@@ -168,7 +155,7 @@ def prune_df(df_stock, df_emerging, df_subscription):
     print(len(df_stock), len(df_emerging), len(df_subscription))
 
     for stock in df_subscription['證券代號'].unique():
-        subscribe_date_list = df_subscription[df_subscription['證券代號'] == stock]['抽籤日期'].unique()
+        subscribe_date_list = df_subscription[df_subscription['證券代號'] == stock]['抽籤日期']
         extend_date_list = []
         for date in subscribe_date_list:
             input_datetime = datetime.datetime.strptime(date, "%Y%m%d")
@@ -188,9 +175,9 @@ if __name__ == '__main__':
 #    pd.set_option('display.width', 1000)
 
     # 更新申購資訊
-    '''df_stock = get_subscription_info.get_subscription_info()
-    print(df_stock)
-    print(df_stock.info())
+    '''df_subscription = get_subscription_info.get_subscription_info()
+    print(df_subscription)
+    print(df_subscription.info())
 
     # 更新上市上櫃歷史股價資訊
     df_stock = get_stock_daily_info.get_stock_otc_daily_info()
@@ -206,7 +193,7 @@ if __name__ == '__main__':
     df_stock, df_emerging, df_subscription = prune_df(df_stock, df_emerging, df_subscription)
     df_stock.to_pickle('stock_daily_info_subset1.pkl')
     df_emerging.to_pickle('emerging_daily_info_subset1.pkl')
-    df_stock.to_pickle('subscription_info_subset1.pkl')'''
+    df_subscription.to_pickle('subscription_info_subset1.pkl')'''
 
     df_stock = pd.read_pickle('stock_daily_info_subset1.pkl')
     df_emerging = pd.read_pickle('emerging_daily_info_subset1.pkl')

@@ -64,6 +64,7 @@ def get_stock_by_date(date):
     df = df.map(lambda s: (str(s).replace('=', '').replace(',', '').replace('"', '').replace(' ', '')))
     df = df.apply(str_to_numeric, axis=1)
     df['日期'] = date
+
     return df
 
 
@@ -111,6 +112,7 @@ def get_otc_by_date(date):
     df = df.reindex(columns=[x[1] for x in otc_to_stock_mapping])
     df = df.apply(str_to_numeric, axis=1)
     df['日期'] = str(int(date)+19110000)
+
     return df
 
 

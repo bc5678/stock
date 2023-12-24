@@ -11,11 +11,10 @@ import get_subscription_info
 def get_stock_runtime_info(stock_list):
     # 可一次query到上市或上櫃的公司資料
     stocks_text = '|'.join(f'tse_{stock}.tw|otc_{stock}.tw' for stock in stock_list)
-    url = 'http://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch='+ stocks_text + '&json=1&delay=0&_=1552123547443'
+    url = 'http://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=' + stocks_text + '&json=1&delay=0&_=1552123547443'
     data = json.loads(urllib.request.urlopen(url).read())
 
-    columns = ['c','n','z','tv','v','o','h','l','y']
-    df = pd.DataFrame(data['msgArray'], columns=columns)
+    df = pd.DataFrame(data['msgArray'], columns=['c','n','z','tv','v','o','h','l','y'])
     df.columns = ['股票代號','股票名稱','成交價','成交量','累積成交量','開盤價','最高價','最低價','昨收價']
 
     try:
@@ -33,10 +32,11 @@ def get_emerging_runtime_info(stock_list):
     res.encoding = 'big5'
 
     lines = [l for l in res.text.split('\n') if len(l.split(','))>=10]
-    df = pd.read_csv(io.StringIO(''.join(lines)))
+    df = pd.read_csv(io.StringIO('\n'.join(lines)))
     df = df.map(lambda s: (str(s).replace(',','').replace(' ', '')))
     df = df[df['代號'].isin(stock_list)]
     df.rename(columns={'代號': '股票代號', '名稱': '股票名稱'}, inplace=True)
+
 
     try:
         df['成交'] = (df['成交'].astype(float) * 100).astype(int)
@@ -48,7 +48,7 @@ def get_emerging_runtime_info(stock_list):
 
 if __name__ == '__main__':
     date = datetime.datetime.today().strftime('%Y%m%d')
-#    date = '20231206'
+#    date = '20231208'
 
     subscription_df = get_subscription_info.get_subscription_info()
     print(subscription_df)
